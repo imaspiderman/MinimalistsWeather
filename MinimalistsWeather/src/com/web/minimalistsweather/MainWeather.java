@@ -28,6 +28,8 @@ public class MainWeather extends Activity implements LocationListener{
 	FileOutputStream fo = null;
 	FileInputStream fi = null;
 	
+	static boolean LocationAvailable = false;
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -45,42 +47,39 @@ public class MainWeather extends Activity implements LocationListener{
 		
 		this.t.setText("Getting location and weather info.");
 		
-		try{
-			this.getFile();
-			if(fi == null || fo != null) {
-				this.doRefresh();
-			}
-		}catch(Exception ex){
-			this.t.setText(ex.getMessage());
-		}
-		
 		this.s.addView(this.t);
 		setContentView(this.s);
+		lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000*60*30, 10000, this);		
 	}
 	
-	private void getFile() throws Exception{
+	private boolean isFileExists(){
+		File f = this.getFileStreamPath(sFileName);		
+		if(f.exists()) return true;
+		return false;
+	}
+	
+	private void readFile() throws Exception{
+		fi = this.openFileInput(sFileName);
+		byte[] fileData = new byte[4096*2];
+		int length = fi.read(fileData);
+		if(length > 0){
+			String sForcast = new String(fileData).substring(0, length);
+			this.t.setText(sForcast);
+		}
+		fi.close();
+		fi = null;
+	}
+	
+	private void writeFile(java.lang.StringBuilder sb) throws Exception{
+		fo = this.openFileOutput(sFileName, 0);
+		fo.write(sb.toString().getBytes());
+		fo.close();
+		fo = null;
+	}
+	
+	private void deleteFile(){
 		File f = this.getFileStreamPath(sFileName);
-		
-		if(f.exists()){
-			fi = this.openFileInput(sFileName);
-		}else{
-			fo = this.openFileOutput(sFileName, 0);
-		}
-	
-		if(fi != null){
-			byte[] fileData = new byte[4096*2];
-			int length = fi.read(fileData);
-			if(length > 0){
-				String sForcast = new String(fileData).substring(0, length);
-				this.t.setText(sForcast);
-			}
-			fi.close();
-			fi = null;
-		}
-	}
-	
-	private void doRefresh(){
-		lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000*60*30, 0, this);
+		f.delete();
 	}
 	
 	private void getWeather(){
@@ -126,13 +125,10 @@ public class MainWeather extends Activity implements LocationListener{
 					sb.append(((Element)(TimeLayoutNames.item(i))).getAttribute("period-name") + ":   " + forcasts.item(i).getTextContent() + "\n\n");
 				}
 				
-				if(fo != null) {
-					fo.write(sb.toString().getBytes());
-					fo.close();
-					fo = null;
-				}
+				if(this.isFileExists())this.deleteFile();
+				this.writeFile(sb);
+				this.readFile();
 				
-				this.getFile();
 			}else{
 				this.t.setText("No Latitude and Longitude information");
 			}
@@ -154,10 +150,7 @@ public class MainWeather extends Activity implements LocationListener{
 		if(item.getTitle().toString().compareTo("Exit") == 0) this.finish();
 		if(item.getTitle().toString().compareTo("Refresh") == 0){
 			try{
-				File f = this.getFileStreamPath(sFileName);
-				if(f.exists())f.delete();
-				this.getFile();
-				this.doRefresh();
+				this.getWeather();
 			}catch(Exception ex){
 				this.t.setText(ex.toString());
 			}
@@ -169,7 +162,8 @@ public class MainWeather extends Activity implements LocationListener{
 	public void onLocationChanged(Location location) {
 		this.latitude = location.getLatitude();
 		this.longitude = location.getLongitude();
-		this.getWeather();
+		if(!LocationAvailable) this.getWeather();
+		LocationAvailable = true;
 	}
 
 	@Override
