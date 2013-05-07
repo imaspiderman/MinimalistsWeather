@@ -148,7 +148,6 @@ public class MainWeather extends Activity implements LocationListener{
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
 		if(item.getTitle().toString().compareTo("Exit") == 0){
-			lm.removeUpdates(this);
 			this.finish();			
 		}
 		if(item.getTitle().toString().compareTo("Refresh") == 0){
@@ -166,7 +165,18 @@ public class MainWeather extends Activity implements LocationListener{
 		this.latitude = location.getLatitude();
 		this.longitude = location.getLongitude();
 		if(!LocationAvailable) this.getWeather();
-		LocationAvailable = true;
+		else{
+			LocationAvailable = true;
+			try{
+				if(this.isFileExists()){
+					this.readFile();
+				}else{
+					this.getWeather();
+				}
+			}catch(Exception ex){
+				this.t.setText(ex.getMessage());
+			}
+		}
 	}
 
 	@Override
