@@ -147,7 +147,10 @@ public class MainWeather extends Activity implements LocationListener{
 
 	@Override
 	public boolean onOptionsItemSelected(MenuItem item) {
-		if(item.getTitle().toString().compareTo("Exit") == 0) this.finish();
+		if(item.getTitle().toString().compareTo("Exit") == 0){
+			lm.removeUpdates(this);
+			this.finish();			
+		}
 		if(item.getTitle().toString().compareTo("Refresh") == 0){
 			try{
 				this.getWeather();
